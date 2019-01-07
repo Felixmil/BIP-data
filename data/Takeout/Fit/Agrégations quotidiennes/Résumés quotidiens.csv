@@ -1,0 +1,5 @@
+Date,Calories (kcal),Distance (m),Fréquence cardiaque moyenne (bpm),Fréquence cardiaque maximale (bpm),Fréquence cardiaque minimale (bpm),Basse latitude (°),Basse longitude (°),Haute latitude (°),Haute longitude (°),Vitesse moyenne (m/s),Vitesse maximale (m/s),Vitesse minimale (m/s),Nombre de pas,Poids moyen (kg),Poids maximal (kg),Poids minimal (kg),"Durée de l'activité ""Inactif"" (ms)","Durée de l'activité ""Marche à pied"" (ms)"
+2019-01-04,99.93123927951389,,,,,,,,,,,,,,,,,
+2019-01-05,1740.7499985083716,,,,,,,,,,,,,,,,,
+2019-01-06,1813.9045757668507,1455.0,,,,,,,,1.4677247784354472,1.481751799583435,1.440000057220459,1970,85.0,85.0,85.0,,985000
+2019-01-07,1454.605846849469,2071.699464082718,98.54855792643765,116.0,74.0,48.8921171,2.3120319843292236,48.92537307739258,2.348980665206909,0.9253086464959457,2.235687017440796,0.16706828773021698,2603,85.0,85.0,85.0,1283887,2088718

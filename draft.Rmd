@@ -16,65 +16,85 @@ knitr::opts_chunk$set(echo = TRUE,
 
 # Library loading
 ```{r}
-library(plotKML)
+library(trackeR)
 library(ggplot2)
 library(ggmap)
 library(tidyverse)
+library(googledrive)
+library(emojifont)
 ```
 
-# Read .GPX data  
+# download google fit archives from takeout
+
+archives are generated manually, stored on personnal google drive and downloaded in ´data´ folder
+
 ```{r}
-files <- list.files("data", ".gpx$")
+archive_list <- googledrive::drive_find("takeout")
 
-raw_data <- readGPX(paste0("data/",files))
+archives <- archive_list$drive_resource
 
-df <- as_data_frame(raw_data$tracks[[1]][[1]])
-```
+filesname <- c()
+filesdate <- c()
+for (f in c(1:length(archives))){
+  filename <- archives[[f]]$name
+  filedate <- archives[[f]]$createdTime
+  filesname <- c(filesname, filename)
+  filesdate <- c(filesdate, filedate)
+}
 
-# Clean data 
-```{r}
-df <- df %>% mutate(time=as.POSIXct(time, format="%Y-%m-%dT%H:%M:%SZ"))
-```
+list_files <- data_frame(filesname, 
+                         filesdate) %>% 
+  mutate(filesdate=as.POSIXct(filesdate,
+                              format="%Y-%m-%dT%H:%M:%S"))
 
-# Compute indicators
+id_to_dowload <- list_files %>% 
+  filter(filesdate==max(list_files$filesdate)) %>%
+  pull(filesname)
 
-Sum of distances between each gps points
-```{r}
-df2 <- df %>% select(lon, lat)
-df2$dist <- c(0, geosphere::distHaversine(head(df2,-1), tail(df2,-1)))
+googledrive::drive_download(id_to_dowload,path = "data/data.zip",overwrite = T)
 
+unzip("data/data.zip",exdir = "data/")
 
-df <- df %>% mutate(dist=sum(df2$dist))
+data_path <- "data/Takeout/Fit/Activités/"
+file_list <- list.files(data_path,pattern = ".tcx$")
+
+df <- data_frame(activity = file_list) %>%
+  mutate(file_contents = map(activity,      
+           ~ readTCX(file.path(data_path, .))) 
+  ) %>% unnest(.) %>% group_by(activity) %>% fill(latitude) %>% fill(longitude) %>% fill(altitude)
 ```
 
 
 # Visualize data
 ```{r, dpi=250}
-ggplot(df,aes(lon, lat))+
+ggplot(df,aes(longitude, latitude))+
   coord_quickmap(expand = T)+
-  geom_point(aes(color=as.numeric(ele)))+
-  theme_void()+
+  geom_point(aes(color=as.numeric(altitude)))+
   labs(color="Altitude (m)")+
   scale_color_distiller(direction = 1)+
-  scale_y_continuous(expand=expand_scale(mult=c(0.18,0.18),add=c(0.00,00)))+
-    scale_x_continuous(expand=c(0.00,0.0009))+
-  
-  ggrepel::geom_text_repel(data = filter(df, df$time==max(df$time)), 
-                           aes(label="Stago\nG1"), 
-                           color="white", 
-                           nudge_y = 0.0001,
-                           nudge_x = 0.001,
-                           size=3.5)+
-    ggrepel::geom_text_repel(data = filter(df, df$time==min(df$time)), 
-                             aes(label="RER C\nLes Gresillons"), 
-                             color="white",min.segment.length = unit(0,'lines'),
-                             nudge_y = -0.0001,
-                             nudge_x = -0.01,
-                             size=3.5)+
-  labs(title=paste0(round(mean(df$dist)),"m in ",round(difftime(max(df$time),min(df$time)))," min."))+
-  theme(plot.background = element_rect(color = "black", fill = "black"),text = element_text(color="white"),plot.margin = unit(c(0,1,0,1),"cm"), legend.position = "bottom",plot.title = element_text(hjust=0.5))
-
-  
+scale_y_continuous(expand=expand_scale(mult=c(0.15,0.15),add=c(0.00,00)))+
+    scale_x_continuous(expand=c(0.00,0.0005))+
+  geom_text(data= df  %>% 
+              filter(time==max(time)) %>% 
+                       mutate(label=emoji('checkered_flag')),aes(label=label),
+            family="OpenSansEmoji",
+                           size=3.5,
+            col="white")+
+     geom_text(data= df  %>% 
+              filter(time==min(time)) %>% 
+                       mutate(label=emoji('triangular_flag_on_post')),
+              aes(label=label),
+            family="OpenSansEmoji",
+            col="white",
+            size=3.5)+
+  facet_wrap(~activity,scales = "free")+
+  theme_void()+
+  theme(plot.background = element_rect(color = "black", fill = "black"),
+        panel.background = element_rect(fill = "black", color="white"),
+        text = element_text(color="white"),
+        plot.margin = unit(c(1,1,1,1),"cm"),
+        legend.position = "bottom",
+        plot.title = element_text(hjust=0.5))
   
 ```
 
