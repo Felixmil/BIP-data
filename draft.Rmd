@@ -1,0 +1,81 @@
+---
+title: "First Import (Draft)"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_fold: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = F,
+                      message = F)
+```
+
+
+# Library loading
+```{r}
+library(plotKML)
+library(ggplot2)
+library(ggmap)
+library(tidyverse)
+```
+
+# Read .GPX data  
+```{r}
+files <- list.files("data", ".gpx$")
+
+raw_data <- readGPX(paste0("data/",files))
+
+df <- as_data_frame(raw_data$tracks[[1]][[1]])
+```
+
+# Clean data 
+```{r}
+df <- df %>% mutate(time=as.POSIXct(time, format="%Y-%m-%dT%H:%M:%SZ"))
+```
+
+
+# Visualize data
+```{r, dpi=250}
+ggplot(df,aes(lon, lat))+
+  coord_quickmap(expand = T)+
+  geom_point(aes(color=as.numeric(ele)))+
+  theme_void()+
+  labs(color="Altitude (m)")+
+  scale_color_distiller(direction = 1)+
+  scale_y_continuous(expand=expand_scale(mult=c(0.18,0.18),add=c(0.00,00)))+
+    scale_x_continuous(expand=c(0.00,0.0009))+
+  theme(plot.background = element_rect(color = "black", fill = "black"),text = element_text(color="white"),plot.margin = unit(c(0,1,0,1),"cm"), legend.position = "bottom")+
+  ggrepel::geom_text_repel(data = filter(df, df$time==max(df$time)), 
+                           aes(label="Stago\nG1"), 
+                           color="white", 
+                           nudge_y = 0.0001,
+                           nudge_x = 0.001,
+                           size=3.5)+
+    ggrepel::geom_text_repel(data = filter(df, df$time==min(df$time)), 
+                             aes(label="RER C\nLes Gresillons"), 
+                             color="white",min.segment.length = unit(0,'lines'),
+                             nudge_y = -0.0001,
+                             nudge_x = -0.01,
+                             size=3.5)
+  
+```
+
+
+# Not working because of firewall
+```{r, eval=F}
+mapImage <- get_map(location = c(lon = mean(df$lon) - 0.05, lat = mean(df$lat)),
+                    source = "google",
+                    maptype = "toner",
+                    zoom = 10)
+ 
+ggmap(mapImage, extent = "device") + 
+  geom_point(aes(x = lon,
+                 y = lat),
+             data = df,
+             colour = "red3",
+             size = .2) 
+```
+
