@@ -36,6 +36,17 @@ df <- as_data_frame(raw_data$tracks[[1]][[1]])
 df <- df %>% mutate(time=as.POSIXct(time, format="%Y-%m-%dT%H:%M:%SZ"))
 ```
 
+# Compute indicators
+
+Sum of distances between each gps points
+```{r}
+df2 <- df %>% select(lon, lat)
+df2$dist <- c(0, geosphere::distHaversine(head(df2,-1), tail(df2,-1)))
+
+
+df <- df %>% mutate(dist=sum(df2$dist))
+```
+
 
 # Visualize data
 ```{r, dpi=250}
@@ -47,7 +58,7 @@ ggplot(df,aes(lon, lat))+
   scale_color_distiller(direction = 1)+
   scale_y_continuous(expand=expand_scale(mult=c(0.18,0.18),add=c(0.00,00)))+
     scale_x_continuous(expand=c(0.00,0.0009))+
-  theme(plot.background = element_rect(color = "black", fill = "black"),text = element_text(color="white"),plot.margin = unit(c(0,1,0,1),"cm"), legend.position = "bottom")+
+  
   ggrepel::geom_text_repel(data = filter(df, df$time==max(df$time)), 
                            aes(label="Stago\nG1"), 
                            color="white", 
@@ -59,13 +70,17 @@ ggplot(df,aes(lon, lat))+
                              color="white",min.segment.length = unit(0,'lines'),
                              nudge_y = -0.0001,
                              nudge_x = -0.01,
-                             size=3.5)
+                             size=3.5)+
+  labs(title=paste0(round(mean(df$dist)),"m in ",round(difftime(max(df$time),min(df$time)))," min."))+
+  theme(plot.background = element_rect(color = "black", fill = "black"),text = element_text(color="white"),plot.margin = unit(c(0,1,0,1),"cm"), legend.position = "bottom",plot.title = element_text(hjust=0.5))
+
+  
   
 ```
 
 
-# Not working because of firewall
 ```{r, eval=F}
+#Not working because of firewall
 mapImage <- get_map(location = c(lon = mean(df$lon) - 0.05, lat = mean(df$lat)),
                     source = "google",
                     maptype = "toner",
